@@ -1,3 +1,4 @@
+const fs = require('fs');
 const utils = require('./utils.js');
 const Max = require('max-api');
 
@@ -56,8 +57,7 @@ async function createMatrix(path){
     }
   } 
   
-  // fs.writeFileSync(path+'-matrix.data', matrix)
-  // fs.writeFileSync(path+'-matrix-LS.data', matrix)
+  if (path) fs.writeFileSync(path + '-matrix-LS.data', matrix)
 
 
   // MATRIX 2
@@ -92,32 +92,36 @@ async function createMatrix(path){
 
 
   // utils.log_status("matrix2: " + matrix2 );
-  // fs.writeFileSync(path+'-matrix-vis.data', matrix2)
-  
+  if (path) fs.writeFileSync(path + '-matrix-vis.data', matrix2)
 
-  // ///////////////////////////////////////
-  // SCALE THE MATRIX TO ANY DESIRED SIZE
-  // Scaling factor is given by Px. Image is converted to Uint8ClampedArray
-  // ///////////////////////////////////////
-  
-  // 1. The scaling could be skipped
+  buildVisualization()
+}
+
+// ///////////////////////////////////////
+// SCALE THE MATRIX TO ANY DESIRED SIZE
+// Scaling factor is given by Px. Image is converted to Uint8ClampedArray,
+// then split into RGBA channels per timestep into `visualizationDict`.
+// Reused by both createMatrix (freshly generated matrix2) and loadMatrix
+// (matrix2 loaded from a previously saved -matrix-vis.data file).
+// ///////////////////////////////////////
+function buildVisualization() {
 
   function scaleMatrix(t, r, c, pos, val) {
     // scale the matrix given the factor Px
     for(let y = 0; y < Px; y++) {
       for(let x = 0; x < Px; x++) {
-        idx = x * 4 + 
-          y * ( 4 * COLS * INST_SIDE * Px ) + 
-          r * ( 4 * COLS * INST_SIDE * Px * Px) + 
-          c * ( Px * 4 ) + 
+        idx = x * 4 +
+          y * ( 4 * COLS * INST_SIDE * Px ) +
+          r * ( 4 * COLS * INST_SIDE * Px * Px) +
+          c * ( Px * 4 ) +
           t * ( COLS * INST_SIDE * ROWS * INST_SIDE * Px * Px * 4 )
         if (val >= 0 && pos%INST_SIDE == 0) matrix3.set([val*255, 0, 0, 255], idx)
-        else if (val >= 0 && pos%INST_SIDE == 1) matrix3.set([0, val*255, 0, 255], idx) 
+        else if (val >= 0 && pos%INST_SIDE == 1) matrix3.set([0, val*255, 0, 255], idx)
         else if (val >= 0 && pos%INST_SIDE == 2) matrix3.set([0, 0, val*255, 255], idx)
       }
     }
   }
-  
+
   let pos;
   let val;
   let idx;
@@ -132,9 +136,9 @@ async function createMatrix(path){
     }
   }
 
-  utils.log_status("Creating Matrix 3") 
+  utils.log_status("Creating Matrix 3")
   generateRGB()
-  
+
   function generateRGB() {
     // Split matrix3 into RGBA channels
     for (let t = 0; t < LOOP_DURATION; t++) {
@@ -149,6 +153,21 @@ async function createMatrix(path){
   }
 }
 
+// Load a previously saved `<path>-matrix-vis.data` (matrix2, written by
+// createMatrix) instead of regenerating it from the model's latent space.
+function loadMatrix(path) {
+  utils.log_status("Loading visualization matrix: " + path);
+  let raw = fs.readFileSync(path + '-matrix-vis.data');
+  let numFloats = raw.length / Float32Array.BYTES_PER_ELEMENT;
+  if (numFloats !== matlength) {
+    utils.error_status("Visualization file doesn't match current ROWS/COLS/LOOP_DURATION (expected "
+      + matlength + " values, got " + numFloats + "). It was likely saved with different constants.js values.");
+    return;
+  }
+  matrix2 = new Float32Array(raw.buffer, raw.byteOffset, numFloats);
+  buildVisualization();
+}
+
 function displayMatrix(t) {
   Max.outlet('visualizer', visualizationDict[t])
 }
@@ -156,5 +175,6 @@ function displayMatrix(t) {
 exports.matrix3 = matrix3;
 exports.red = red;
 exports.createMatrix = createMatrix;
+exports.loadMatrix = loadMatrix;
 exports.displayMatrix = displayMatrix;
 // exports.generateVisualization = generateVisualization;

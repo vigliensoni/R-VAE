@@ -276,7 +276,7 @@ Max.addHandler("savemodel", (path)=>{
         vae.saveModel(filepath).then(result => {
             utils.log_status('Model result was: ', result);
             console.log('Model result was: ', result);
-            createMatrix(path).then(result => {
+            visualizer.createMatrix(path).then(result => {
                 utils.log_status('Matrix result was: ', result);
                 console.log('Matrix result was: ', result);
             })      
@@ -291,11 +291,15 @@ Max.addHandler("savemodel", (path)=>{
 
 Max.addHandler("loadmodel", (path)=>{
     filepath = "file://" + path;
-    // model = vae.loadModel(filepath);
     vae.loadModel(filepath)
-    .then(result => utils.log_status("Model loaded! "))
-    // .then(result2 => visualizer.createMatrix(vae.model))
-    // .then(result3 => utils.log_status("Visualization generated! "))
+    .then(result => {
+        utils.log_status("Model loaded! ");
+        let visPath = path.replace(/\.json$/, '');
+        if (fs.existsSync(visPath + '-matrix-vis.data')) {
+            visualizer.loadMatrix(visPath);
+            utils.log_status("Visualization loaded! ");
+        }
+    });
 });
 
 Max.addHandler("epochs", (e)=>{
@@ -308,8 +312,12 @@ function reportNumberOfBars(){
 }
 
 Max.addHandler("visualizer", () => {
-    visualizer.createMatrix(vae.model)
-    .then(result => utils.log_status("Visualization generated!"))
+    if (vae.isReadyToGenerate()){
+        visualizer.createMatrix(vae.model)
+        .then(result => utils.log_status("Visualization generated!"))
+    } else {
+        utils.error_status("Train a model first!");
+    }
 })
 
 Max.addHandler("displayMatrix", (timestep) => {

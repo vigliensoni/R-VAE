@@ -84,8 +84,8 @@ const MIN_ONSETS_THRESHOLD = 5; // ignore loops with onsets less than this num
 const ORIGINAL_DIM = NUM_DRUM_CLASSES * LOOP_DURATION;
 
 
-const ROWS = 28 // number of rows for UI matrix
-const COLS = 28 // number of cols for UI matrix
+const ROWS = 30 // number of rows for UI matrix
+const COLS = 30 // number of cols for UI matrix
 
 exports.ROWS = ROWS;
 exports.COLS = COLS;
